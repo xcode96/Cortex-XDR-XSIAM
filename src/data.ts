@@ -2385,43 +2385,5 @@ export const QUERIES: Query[] = [
       "Security Controls"
     ],
     "bioc_category": "impact"
-  },
-  {
-    "name": "demo",
-    "description": "demo",
-    "author": "demo",
-    "github": "demo",
-    "severity": "Medium",
-    "content_type": "Detection",
-    "tags": [],
-    "mitre_ids": [
-      "T1595",
-      "T1681",
-      "T1657"
-    ],
-    "log_sources": [
-      "demo"
-    ],
-    "query": "dataset = xdr_data\n| filter event_type = ENUM.PROCESS and (actor_process_command_line contains \"systemctl stop traps_pmd.service\" or actor_process_command_line contains \"disable traps_pmd.service\" or actor_process_command_line contains \"service traps_pmd stop\" or actor_process_command_line contains \"service traps_pmd disable\")",
-    "id": "q-1778172313373",
-    "created": "2026-05-07T16:45:13.373Z"
-  },
-  {
-    "name": "demo",
-    "description": "demo",
-    "author": "dmeo",
-    "github": "",
-    "severity": "Informational",
-    "content_type": "Detection",
-    "tags": [],
-    "mitre_ids": [
-      "T1566"
-    ],
-    "log_sources": [
-      "Cloud Audit Logs"
-    ],
-    "query": "e",
-    "id": "q-1778176455504",
-    "created": "2026-05-07T17:54:15.504Z"
   }
 ];
