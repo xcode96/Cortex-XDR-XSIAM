@@ -711,10 +711,15 @@ export default function ContributeModal({ isOpen, onClose, onSuccess, editingQue
                                  </li>
                                ))}
                             </ul>
-                            <button className="w-full mt-4 bg-zinc-100 text-zinc-950 py-3 rounded-xl font-bold text-sm hover:bg-white transition-colors flex items-center justify-center gap-2">
+                            <a 
+                               href="https://github.com/xcode96"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="w-full mt-4 bg-zinc-100 text-zinc-950 py-3 rounded-xl font-bold text-sm hover:bg-white transition-colors flex items-center justify-center gap-2"
+                            >
                               Go to GitHub
                               <Github className="w-4 h-4" />
-                            </button>
+                            </a>
                          </div>
                       </motion.div>
                     )}
