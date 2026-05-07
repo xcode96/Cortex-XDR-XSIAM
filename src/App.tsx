@@ -25,6 +25,9 @@ export default function App() {
   const [hoveredTechniqueId, setHoveredTechniqueId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
+  const [editingQuery, setEditingQuery] = useState<Query | undefined>(undefined);
+
+  const isAdmin = searchQuery.toLowerCase() === 'dqadm';
 
   useEffect(() => {
     fetchQueries();
@@ -51,10 +54,16 @@ export default function App() {
       if (savedQueries) {
         try {
           const userQueries = JSON.parse(savedQueries) as Query[];
-          // Append user queries, ensuring no duplicates by ID
-          const existingIds = new Set(combinedQueries.map(q => q.id));
+          // Map user queries by ID for easy lookup and override
+          const userQueriesMap = new Map(userQueries.map(q => [q.id, q]));
+          
+          // Start with default queries, replacing any that have user overrides
+          combinedQueries = QUERIES.map(q => userQueriesMap.get(q.id) || q);
+          
+          // Add any user queries that are entirely new (not in QUERIES)
+          const defaultIds = new Set(QUERIES.map(q => q.id));
           userQueries.forEach(uq => {
-            if (!existingIds.has(uq.id)) {
+            if (!defaultIds.has(uq.id)) {
               combinedQueries.push(uq);
             }
           });
@@ -112,6 +121,7 @@ export default function App() {
 
           localStorage.setItem('xql-hub-user-queries', JSON.stringify(currentUserQueries));
           fetchQueries();
+          alert('Import successful!');
         }
       } catch (error) {
         console.error('Failed to import queries:', error);
@@ -123,6 +133,52 @@ export default function App() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleExportDataTs = () => {
+    const fileContent = `/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Query, Tactic, MitreTechnique } from './types';
+
+export const TACTICS: Tactic[] = ${JSON.stringify(TACTICS, null, 2)};
+
+export const MITRE_MAPPINGS: Record<string, MitreTechnique> = ${JSON.stringify(MITRE_MAPPINGS, null, 2)};
+
+export const QUERIES: Query[] = ${JSON.stringify(queries, null, 2)};
+`;
+
+    const blob = new Blob([fileContent], { type: 'text/typescript' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data.ts';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!confirm('Are you sure you want to delete this query?')) return;
+    
+    // Remote from state
+    setQueries(prev => prev.filter(q => q.id !== id));
+    
+    // Remove from localStorage if it was a user query
+    const savedQueriesRaw = localStorage.getItem('xql-hub-user-queries');
+    if (savedQueriesRaw) {
+      const userQueries = JSON.parse(savedQueriesRaw) as Query[];
+      const updatedUserQueries = userQueries.filter(q => q.id !== id);
+      localStorage.setItem('xql-hub-user-queries', JSON.stringify(updatedUserQueries));
+    }
+  };
+
+  const handleEdit = (query: Query) => {
+    setEditingQuery(query);
+    setIsContributeModalOpen(true);
+  };
+
   const logSources = useMemo(() => {
     const sources = new Set<string>();
     queries.forEach(q => q.log_sources.forEach(s => sources.add(s)));
@@ -131,7 +187,9 @@ export default function App() {
 
   const filteredQueries = useMemo(() => {
     return queries.filter(query => {
+      const isSearchAdmin = searchQuery.toLowerCase() === 'dqadm';
       const matchesSearch = searchQuery === '' || 
+        isSearchAdmin || 
         query.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         query.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         query.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -339,6 +397,16 @@ export default function App() {
             </button>
 
             <div className="pt-4 border-t border-zinc-900 space-y-3">
+              {isAdmin && (
+                <button 
+                  onClick={handleExportDataTs}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 border border-blue-500 rounded-lg text-xs font-bold hover:bg-blue-500 transition-colors text-white shadow-lg shadow-blue-500/20"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download data.ts
+                </button>
+              )}
+              
               <button 
                 onClick={handleExport}
                 className="flex items-center justify-center gap-2 w-full py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-semibold hover:bg-zinc-800 transition-colors text-zinc-300"
@@ -535,6 +603,22 @@ export default function App() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        {isAdmin && (
+                          <div className="flex items-center gap-1.5 mr-2">
+                            <button 
+                              onClick={() => handleEdit(query)}
+                              className="p-1 px-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded transition-colors text-[10px] font-bold"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(query.id)}
+                              className="p-1 px-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded transition-colors text-[10px] font-bold"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                         <User className="w-3 h-3" />
                         {query.author}
                       </div>
@@ -613,8 +697,12 @@ export default function App() {
       
       <ContributeModal 
         isOpen={isContributeModalOpen} 
-        onClose={() => setIsContributeModalOpen(false)} 
+        onClose={() => {
+          setIsContributeModalOpen(false);
+          setEditingQuery(undefined);
+        }} 
         onSuccess={fetchQueries}
+        editingQuery={editingQuery}
       />
     </div>
   );
