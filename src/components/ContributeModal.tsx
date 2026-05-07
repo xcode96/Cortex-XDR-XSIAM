@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { X, ChevronRight, ChevronLeft, Check, Search, Code, Shield, User, Github, Tag, Terminal, Download, Globe, AlertCircle, Copy, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TACTICS, MITRE_MAPPINGS } from '../data';
-import { Severity } from '../types';
+import { Severity, Query } from '../types';
 
 interface ContributeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editingQuery?: Query;
 }
 
 const LOG_SOURCES = [
@@ -28,7 +29,7 @@ const LOG_SOURCES = [
   'System Logs'
 ];
 
-export default function ContributeModal({ isOpen, onClose, onSuccess }: ContributeModalProps) {
+export default function ContributeModal({ isOpen, onClose, onSuccess, editingQuery }: ContributeModalProps) {
   const [step, setStep] = useState(1);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +46,53 @@ export default function ContributeModal({ isOpen, onClose, onSuccess }: Contribu
     selectedTactics: [] as string[],
     selectedTechniques: [] as string[]
   });
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (editingQuery) {
+        setFormData({
+          name: editingQuery.name,
+          description: editingQuery.description,
+          author: editingQuery.author,
+          github: editingQuery.github || '',
+          severity: editingQuery.severity,
+          logSources: editingQuery.log_sources,
+          tags: editingQuery.tags,
+          query: editingQuery.query,
+          selectedTactics: [],
+          selectedTechniques: editingQuery.mitre_ids
+        });
+        
+        // Derive tactics
+        const tactics = new Set<string>();
+        editingQuery.mitre_ids.forEach(mid => {
+          const tid = mid.split('.')[0];
+          const mapping = MITRE_MAPPINGS[tid];
+          if (mapping) mapping.tactic_ids.forEach(t => tactics.add(t));
+        });
+        setFormData(prev => ({ ...prev, selectedTactics: Array.from(tactics) }));
+        setStep(1);
+        setIsSubmitted(false);
+        setIsDownloaded(false);
+      } else {
+        setFormData({
+          name: '',
+          description: '',
+          author: '',
+          github: '',
+          severity: 'Informational',
+          logSources: [],
+          tags: [],
+          query: '',
+          selectedTactics: [],
+          selectedTechniques: []
+        });
+        setStep(1);
+        setIsSubmitted(false);
+        setIsDownloaded(false);
+      }
+    }
+  }, [editingQuery, isOpen]);
   const [tagInput, setTagInput] = useState('');
   const [techniqueSearch, setTechniqueSearch] = useState('');
   const [customLogSources, setCustomLogSources] = useState<string[]>([]);
@@ -136,28 +184,43 @@ export default function ContributeModal({ isOpen, onClose, onSuccess }: Contribu
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
+      const entryId = editingQuery?.id || `${formData.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.yaml`;
+      
       const newEntry = {
-        id: `${formData.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.yaml`,
+        id: entryId,
         name: formData.name,
         description: formData.description,
         author: formData.author,
         github: formData.github,
-        severity: formData.severity,
-        content_type: 'bioc' as const, // Defaulting to bioc if not specified
+        severity: formData.severity as Severity,
+        content_type: 'bioc' as const,
         tags: formData.tags,
         mitre_ids: formData.selectedTechniques,
         log_sources: formData.logSources,
         query: formData.query,
-        created: new Date().toISOString()
+        created: editingQuery?.created || new Date().toISOString(),
+        updated: new Date().toISOString()
       };
 
       // Save to localStorage
       const savedQueriesRaw = localStorage.getItem('xql-hub-user-queries');
-      let userQueries = [];
+      let userQueries: any[] = [];
       if (savedQueriesRaw) {
         userQueries = JSON.parse(savedQueriesRaw);
       }
-      userQueries.push(newEntry);
+
+      if (editingQuery) {
+        const index = userQueries.findIndex((q: any) => q.id === editingQuery.id);
+        if (index !== -1) {
+          userQueries[index] = newEntry;
+        } else {
+          // It was a default query, now we save it as a "override" in user queries
+          userQueries.push(newEntry);
+        }
+      } else {
+        userQueries.push(newEntry);
+      }
+      
       localStorage.setItem('xql-hub-user-queries', JSON.stringify(userQueries));
 
       setIsSubmitted(true);
@@ -195,7 +258,7 @@ export default function ContributeModal({ isOpen, onClose, onSuccess }: Contribu
           <div className="flex items-center justify-between p-6 border-b border-zinc-900">
             <div>
               <h2 className="text-xl font-bold text-white">
-                {step === 1 ? 'Enter the details' : step === 2 ? 'XQL Query & MITRE ATT&CK Mapping' : 'Review & Submit'}
+                {editingQuery ? 'Edit Contribution' : (step === 1 ? 'Enter the details' : step === 2 ? 'XQL Query & MITRE ATT&CK Mapping' : 'Review & Submit')}
               </h2>
               <p className="text-sm text-zinc-500 mt-1">
                 {step === 1 
