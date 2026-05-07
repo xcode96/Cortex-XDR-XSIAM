@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import helmet from "helmet";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,6 +11,46 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  
+  // Security Headers Implementation
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com"],
+          imgSrc: ["'self'", "data:", "blob:", "https://*"],
+          connectSrc: ["'self'", "https://*", "wss://*"],
+          // frame-ancestors is critical for the app to work in the AI Studio iframe
+          frameAncestors: ["'self'", "https://ai.studio", "https://*.google.com", "https://*.run.app"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: [],
+        },
+      },
+      // X-Frame-Options: Set to false to use frame-ancestors instead, which is more flexible for iframes
+      frameguard: false,
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+      noSniff: true,
+    })
+  );
+
+  // Set Permissions-Policy manually as it might not be in the helmet type definition
+  app.use((req, res, next) => {
+    res.setHeader(
+      "Permissions-Policy",
+      "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    );
+    // Manual X-Frame-Options fallback if needed (though frameAncestors in CSP is preferred)
+    res.setHeader("X-Frame-Options", "ALLOW-FROM https://ai.studio");
+    next();
+  });
   
   app.use(express.json());
 
