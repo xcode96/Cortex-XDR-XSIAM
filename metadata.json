@@ -1,0 +1,6 @@
+{
+  "name": "XQL (XDR Query Language)",
+  "description": "A community-focused repository for Cortex XDR XQL queries, featuring MITRE ATT&CK mapping, advanced filtering, and a collaborative contribution workflow.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

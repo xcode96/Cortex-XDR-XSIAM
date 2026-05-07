@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XQL (XDR Query Language)</title>
+    <script>
+      // Workaround for some libraries that try to overwrite window.fetch
+      // which is read-only in some environments.
+      (function() {
+        const _fetch = window.fetch;
+        try {
+          Object.defineProperty(window, 'fetch', {
+            get: () => _fetch,
+            set: () => { /* ignore */ },
+            configurable: true
+          });
+        } catch (e) {
+          console.warn('Fetch override protection failed', e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
