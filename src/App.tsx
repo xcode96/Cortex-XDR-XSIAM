@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Plus, Trash2, Shield, AlertCircle, Copy, Check, ExternalLink, Filter, ChevronDown, ChevronRight, User, Loader2, Menu, X as CloseIcon, Download, Upload } from 'lucide-react';
+import { Search, Plus, Trash2, Shield, AlertCircle, Copy, Check, ExternalLink, Filter, ChevronDown, ChevronRight, User, Loader2, Menu, X as CloseIcon, Download, Upload, Github } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TACTICS, MITRE_MAPPINGS, QUERIES } from './data';
 import { Query, Severity, ContentType } from './types';
@@ -415,6 +415,16 @@ export const QUERIES: Query[] = ${JSON.stringify(queries, null, 2)};
                 Download JSON
               </button>
               
+              <a 
+                href="https://github.com/xcode96"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-semibold hover:bg-zinc-800 transition-colors text-zinc-300"
+              >
+                Go to GitHub
+                <Github className="w-3.5 h-3.5" />
+              </a>
+              
               <button 
                 onClick={() => fileInputRef.current?.click()}
                 className="flex items-center justify-center gap-2 w-full py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-semibold hover:bg-zinc-800 transition-colors text-zinc-300"
@@ -489,8 +499,8 @@ export const QUERIES: Query[] = ${JSON.stringify(queries, null, 2)};
                       </div>
                     </button>
 
-                    <div className={`flex flex-col gap-1 overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                      {techniquesInTactic.map(tech => {
+                    <div className={`flex flex-col gap-1 transition-all duration-300 ${isExpanded ? 'max-h-[1000px] opacity-100 mt-1 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                      {techniquesInTactic.map((tech, index) => {
                         const tc = queries.filter(q => q.mitre_ids.some(mid => mid.startsWith(tech.id))).length;
                         const isSelected = selectedMitre.has(tech.id);
                         
@@ -498,6 +508,8 @@ export const QUERIES: Query[] = ${JSON.stringify(queries, null, 2)};
                         const isAssociatedWithHoveredQuery = hoveredQueryId && queries.find(q => q.id === hoveredQueryId)?.mitre_ids.some(mid => mid.startsWith(tech.id));
                         
                         if (tc === 0) return null;
+
+                        const isTopTechnique = index < 3;
 
                         return (
                           <div 
@@ -523,10 +535,10 @@ export const QUERIES: Query[] = ${JSON.stringify(queries, null, 2)};
                             <AnimatePresence>
                               {hoveredTechniqueId === tech.id && (
                                 <motion.div
-                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  initial={{ opacity: 0, scale: 0.95, y: isTopTechnique ? -10 : 10 }}
                                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-[100] pointer-events-none"
+                                  exit={{ opacity: 0, scale: 0.95, y: isTopTechnique ? -10 : 10 }}
+                                  className={`absolute ${isTopTechnique ? 'top-full mt-3' : 'bottom-full mb-3'} left-1/2 -translate-x-1/2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-[100] pointer-events-none`}
                                 >
                                   <div className="text-zinc-100 font-bold mb-2 flex items-center justify-between">
                                     <span>{tech.name}</span>
@@ -535,7 +547,7 @@ export const QUERIES: Query[] = ${JSON.stringify(queries, null, 2)};
                                   <p className="text-zinc-400 text-[10px] leading-relaxed italic">
                                     {tech.description || "No description available for this technique."}
                                   </p>
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 bg-zinc-900 border-r border-b border-zinc-800 rotate-45 -mt-1.5" />
+                                  <div className={`absolute ${isTopTechnique ? 'bottom-full -mb-1.5' : 'top-full -mt-1.5'} left-1/2 -translate-x-1/2 w-3 h-3 bg-zinc-900 border-zinc-800 rotate-45 ${isTopTechnique ? 'border-l border-t' : 'border-r border-b'}`} />
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -694,6 +706,17 @@ export const QUERIES: Query[] = ${JSON.stringify(queries, null, 2)};
           </div>
         </main>
       </div>
+
+      {/* Footer */}
+      <footer className="py-6 px-8 border-t border-zinc-900 bg-black flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-zinc-500 text-xs font-medium">
+          <Shield className="w-4 h-4" />
+          <span>XQL Hub &copy; {new Date().getFullYear()}</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <span className="text-zinc-500 text-xs">Community-led Project</span>
+        </div>
+      </footer>
       
       <ContributeModal 
         isOpen={isContributeModalOpen} 
