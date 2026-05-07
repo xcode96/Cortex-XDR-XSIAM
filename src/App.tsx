@@ -3,16 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo, useEffect } from 'react';
-import { Search, Plus, Trash2, Shield, AlertCircle, Copy, Check, ExternalLink, Filter, ChevronDown, ChevronRight, User, Loader2, Menu, X as CloseIcon } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Search, Plus, Trash2, Shield, AlertCircle, Copy, Check, ExternalLink, Filter, ChevronDown, ChevronRight, User, Loader2, Menu, X as CloseIcon, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TACTICS, MITRE_MAPPINGS } from './data';
+import { TACTICS, MITRE_MAPPINGS, QUERIES } from './data';
 import { Query, Severity, ContentType } from './types';
 import ContributeModal from './components/ContributeModal';
 
 export default function App() {
   const [queries, setQueries] = useState<Query[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [contentType, setContentType] = useState<ContentType | 'all'>('all');
   const [logSource, setLogSource] = useState<string>('all');
@@ -43,14 +44,83 @@ export default function App() {
   const fetchQueries = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/queries');
-      const data = await response.json();
-      setQueries(data);
+      // First, check localStorage for any user contribution/overrides
+      const savedQueries = localStorage.getItem('xql-hub-user-queries');
+      let combinedQueries = [...QUERIES];
+      
+      if (savedQueries) {
+        try {
+          const userQueries = JSON.parse(savedQueries) as Query[];
+          // Append user queries, ensuring no duplicates by ID
+          const existingIds = new Set(combinedQueries.map(q => q.id));
+          userQueries.forEach(uq => {
+            if (!existingIds.has(uq.id)) {
+              combinedQueries.push(uq);
+            }
+          });
+        } catch (e) {
+          console.error('Failed to parse saved queries', e);
+        }
+      }
+      
+      setQueries(combinedQueries);
     } catch (error) {
       console.error('Failed to fetch queries:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleExport = () => {
+    const data = JSON.stringify(queries, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `xql-queries-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedQueries = JSON.parse(content) as Query[];
+        
+        if (Array.isArray(importedQueries)) {
+          // Merge with existing user queries in localStorage
+          const savedQueriesRaw = localStorage.getItem('xql-hub-user-queries');
+          let currentUserQueries: Query[] = [];
+          if (savedQueriesRaw) {
+            currentUserQueries = JSON.parse(savedQueriesRaw);
+          }
+          
+          // Add new ones
+          const existingIds = new Set(currentUserQueries.map(q => q.id));
+          importedQueries.forEach(iq => {
+            if (!existingIds.has(iq.id)) {
+              currentUserQueries.push(iq);
+            }
+          });
+
+          localStorage.setItem('xql-hub-user-queries', JSON.stringify(currentUserQueries));
+          fetchQueries();
+        }
+      } catch (error) {
+        console.error('Failed to import queries:', error);
+        alert('Invalid JSON file format.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const logSources = useMemo(() => {
@@ -267,6 +337,31 @@ export default function App() {
               <Trash2 className="w-3.5 h-3.5" />
               Clear All Filters
             </button>
+
+            <div className="pt-4 border-t border-zinc-900 space-y-3">
+              <button 
+                onClick={handleExport}
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-semibold hover:bg-zinc-800 transition-colors text-zinc-300"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download JSON
+              </button>
+              
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-semibold hover:bg-zinc-800 transition-colors text-zinc-300"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Upload JSON
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImport} 
+                className="hidden" 
+                accept=".json"
+              />
+            </div>
           </div>
         </aside>
 
