@@ -117,35 +117,19 @@ export default function ContributeModal({ isOpen, onClose, onSuccess }: Contribu
 
   const handleDownload = async () => {
     try {
-      const response = await fetch('/api/queries');
-      const allQueries = await response.json();
-      
-      const fileContent = `/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { Query, Tactic, MitreTechnique } from './types';
-
-export const TACTICS: Tactic[] = ${JSON.stringify(TACTICS, null, 2)};
-
-export const MITRE_MAPPINGS: Record<string, MitreTechnique> = ${JSON.stringify(MITRE_MAPPINGS, null, 2)};
-
-export const QUERIES: Query[] = ${JSON.stringify(allQueries, null, 2)};
-`;
-
-      const blob = new Blob([fileContent], { type: 'text/typescript' });
+      const data = JSON.stringify(formData, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'data.ts';
+      a.download = `${formData.name.toLowerCase().replace(/\s+/g, '_') || 'query'}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       setIsDownloaded(true);
     } catch (error) {
-      console.error('Failed to download full dataset:', error);
+      console.error('Failed to download query:', error);
     }
   };
 
@@ -153,30 +137,33 @@ export const QUERIES: Query[] = ${JSON.stringify(allQueries, null, 2)};
     try {
       setIsSubmitting(true);
       const newEntry = {
+        id: `${formData.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.yaml`,
         name: formData.name,
         description: formData.description,
         author: formData.author,
         github: formData.github,
         severity: formData.severity,
-        content_type: 'Detection',
+        content_type: 'bioc' as const, // Defaulting to bioc if not specified
         tags: formData.tags,
         mitre_ids: formData.selectedTechniques,
         log_sources: formData.logSources,
-        query: formData.query
+        query: formData.query,
+        created: new Date().toISOString()
       };
 
-      const response = await fetch('/api/queries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newEntry)
-      });
-
-      if (response.ok) {
-        setIsSubmitted(true);
-        onSuccess();
+      // Save to localStorage
+      const savedQueriesRaw = localStorage.getItem('xql-hub-user-queries');
+      let userQueries = [];
+      if (savedQueriesRaw) {
+        userQueries = JSON.parse(savedQueriesRaw);
       }
+      userQueries.push(newEntry);
+      localStorage.setItem('xql-hub-user-queries', JSON.stringify(userQueries));
+
+      setIsSubmitted(true);
+      onSuccess();
     } catch (error) {
-      console.error('Failed to submit query:', error);
+      console.error('Failed to save query:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -588,9 +575,9 @@ export const QUERIES: Query[] = ${JSON.stringify(allQueries, null, 2)};
                              {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Shield className="w-6 h-6" />}
                            </div>
                            <div className="flex-1">
-                             <h4 className="font-bold mb-1 text-white">Commit to Server</h4>
+                             <h4 className="font-bold mb-1 text-white">Save Locally</h4>
                              <p className="text-xs text-zinc-500 leading-relaxed max-w-md">
-                               Save this contribution permanently to the XQL (XDR Query Language) database. It will be reflected for all users instantly.
+                               Save this contribution to your browser's local storage. You can then download the full dataset for permanent backup.
                              </p>
                            </div>
                            <ChevronRight className="w-5 h-5 text-zinc-700 mt-1" />
@@ -626,10 +613,10 @@ export const QUERIES: Query[] = ${JSON.stringify(allQueries, null, 2)};
                         </div>
                         <div className="flex-1">
                           <h4 className={`font-bold mb-1 ${isDownloaded ? 'text-emerald-400' : 'text-white'}`}>
-                            {isDownloaded ? 'data.ts Downloaded' : 'Download Complete data.ts'}
+                            {isDownloaded ? 'Query Downloaded' : 'Download This Query'}
                           </h4>
                           <p className="text-xs text-zinc-500 leading-relaxed max-w-md">
-                            Download the entire dataset, including your new contribution and all existing queries, mapped and filtered.
+                            Download just this individual query as a JSON file for your records.
                           </p>
                         </div>
                         {!isDownloaded && <ChevronRight className="w-5 h-5 text-zinc-700 mt-1" />}
@@ -649,9 +636,9 @@ export const QUERIES: Query[] = ${JSON.stringify(allQueries, null, 2)};
                             </div>
                             <ul className="space-y-3">
                                {[
-                                 'Fork the XQL (XDR Query Language) repository',
-                                 'Add your data.ts file to the /src folder',
-                                 'Create a Pull Request'
+                                 'Contribution saved to Local Storage',
+                                 'Export all queries from the sidebar for backup',
+                                 'Share the JSON file with others'
                                ].map((step, i) => (
                                  <li key={i} className="flex items-start gap-3 text-sm text-zinc-400">
                                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
