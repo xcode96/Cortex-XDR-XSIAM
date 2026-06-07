@@ -11,6 +11,8 @@ XQL Hub is a centralized, community-driven repository for **XQL (XDR Query Langu
 - **Responsive Design**: Polished, dark-themed UI built with Tailwind CSS and Framer Motion, optimized for both desktop and mobile.
 <img width="1890" height="880" alt="image" src="https://github.com/user-attachments/assets/00433899-4a8c-4e69-8ea1-1885d4c9276f" />
 <img width="947" height="441" alt="image" src="https://github.com/user-attachments/assets/7756a36e-74d3-4bf2-ac9e-1b2e64a4a751" />
+<img width="905" height="456" alt="image" src="https://github.com/user-attachments/assets/856dfcf0-c89e-44d9-a3c3-c3ebf388779e" />
+
 
 
 
