@@ -1,4 +1,4 @@
-# XQL Hub: Palo Alto Networks Cortex XDR/XSIAM Query Repository
+#   XQL Hub: Palo Alto Networks Cortex XDR/XSIAM Query Repository
 
 XQL Hub is a centralized, community-driven repository for **XQL (XDR Query Language)** queries used in Palo Alto Networks Cortex XDR and XSIAM platforms. It allows security researchers and SOC analysts to discover, contribute, and manage high-quality detection and hunting queries mapped to the MITRE ATT&CK® framework.
 
